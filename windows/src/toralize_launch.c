@@ -17,9 +17,9 @@ static int inject(HANDLE proc, const char *dllPath) {
         return -1;
     }
 
-    HMODULE k32 = GetModuleHandleA("kernel32.dll");                       // ← kernel32, not your dll
+    HMODULE k32 = GetModuleHandleA("kernel32.dll");                       // kernel32, not your dll
     LPTHREAD_START_ROUTINE loadlib =
-        (LPTHREAD_START_ROUTINE)GetProcAddress(k32, "LoadLibraryA");      // ← LoadLibraryA
+        (LPTHREAD_START_ROUTINE)GetProcAddress(k32, "LoadLibraryA");      // LoadLibraryA
     if (!loadlib) { fprintf(stderr, "GetProcAddress(LoadLibraryA) failed\n"); return -1; }
 
     HANDLE t = CreateRemoteThread(proc, NULL, 0, loadlib, mem, 0, NULL);  // runs LoadLibraryA(mem) in curl
@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <program> [args ....]", argv[0]);
         return EXIT_FAILURE;
-    } 
+    }
     /* 1. join argv[1..] into a command line (curl + its args) */
     char cmdline[MAX_CMD_LINE] = {0};
     for (int i = 1; i < argc; i++) {
@@ -84,13 +84,14 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
+    /* 4. wait for the DLL to finish installing hooks, then resume */
     WaitForSingleObject(hooksReady, 5000);
-    /* 4. resume and wait */
     ResumeThread(pi.hThread);
     WaitForSingleObject(pi.hProcess, INFINITE);
 
     DWORD code = 0;
     GetExitCodeProcess(pi.hProcess, &code);               // pass through curl's exit code
+    if (hooksReady) CloseHandle(hooksReady);
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
     return (int)code;

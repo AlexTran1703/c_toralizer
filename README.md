@@ -9,14 +9,17 @@ toralize.exe <program> [args...]
 
 ```
 
+## Requirements
+
+clang · GNU make · Git · Tor Expert Bundle (`get-tor.ps1`) · Windows 10+ (ANSI VT for colored console).
+
 ---
 ## Current version
-
 
 | Version | DST field                                     | Hostname? | Steps                                | Auth     | Status |
 | ------- | --------------------------------------------- | --------- | ------------------------------------ | -------- | ------ |
 | SOCKS4  | 4-byte IP (you resolve DNS)                   | no        | 1 req/resp                           | no       | ✅ done |
-| SOCKS4a | IP = 0.0.0.x, host appended after userid `\0` | yes       | 1 req/resp                           | no       | ☐ todo |
+| SOCKS4a | IP = 0.0.0.x, host appended after userid `\0` | yes       | 1 req/resp                           | no       | ✅ done |
 | SOCKS5  | ATYP: 0x01 IPv4 / 0x03 host / 0x04 IPv6       | yes       | 3-step (greeting → [auth] → connect) | optional | ☐ todo |
 
 
@@ -28,7 +31,7 @@ cd windows
 
 # 2.a Start Tor (SOCKS proxy on 127.0.0.1:9050)
 ## Must run in detached terminal
-.\tor_3rd\tor\tor.exe
+$j = Start-Job { & 'tor_3rd\tor\tor.exe' }
 # 
 
 # 3. Build (from windows/)
@@ -37,6 +40,7 @@ make release    # no debug output
 
 # 4. Run something through Tor
 .\out\toralize.exe curl.exe --resolve check.torproject.org:443:116.202.120.181 https://check.torproject.org/api/ip
+Receive-Job $j
 #   expect: {"IsTor":true,"IP":"..."}
 ```
 
@@ -138,6 +142,4 @@ windows/
   Makefile     get-tor.ps1
 ```
 
-## Requirements
 
-clang · GNU make · Tor Expert Bundle (`get-tor.ps1`) · Windows 10+ (ANSI VT for colored console).
