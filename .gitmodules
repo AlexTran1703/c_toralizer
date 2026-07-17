@@ -1,0 +1,6 @@
+[submodule "windows/minhook"]
+	path = windows/minhook
+	url = https://github.com/TsudaKageyu/minhook.git
+[submodule "windows/third_party/minhook"]
+	path = windows/third_party/minhook
+	url = https://github.com/TsudaKageyu/minhook.git

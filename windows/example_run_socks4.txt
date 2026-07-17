@@ -1,0 +1,4 @@
+.\out\toralize.exe curl.exe --resolve check.torproject.org:443:116.202.120.181 https://check.torproject.org/api/ip
+
+#If return {"IsTor":true,"IP":"X.X.X.X"}
+-> The program is good to go
