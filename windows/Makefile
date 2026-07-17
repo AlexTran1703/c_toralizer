@@ -1,9 +1,11 @@
 all: clean build
 
+SRCS := $(wildcard src/*.c)
+
 build:
 	@echo Building toralize
 	mkdir out
-	clang src/toralize.c -o out/toralize.exe -I. -lws2_32
+	clang $(SRCS) -o out/toralize.exe -I. -Iinclude -lws2_32
 
 clean:
 	@echo Cleaning old file

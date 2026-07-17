@@ -1,8 +1,9 @@
+#pragma once
 #include <stdio.h>
 #include <stdint.h>
 
-#define PROXY_IP "127.0.0.1"
-#define PROXY_PORT 9090
+#define PROXY_HOST "127.0.0.1"
+#define PROXY_PORT 9050
 #define PROXY_NAME "toraliz"
 #define REQUEST_SIZE (sizeof (struct proxy_request))
 #define RESPONSE_SIZE (sizeof (struct proxy_response))

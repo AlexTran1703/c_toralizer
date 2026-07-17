@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "src/toralize.h"
+#include "toralize.h"
 
 //Win Socket
 #include <winsock2.h>
@@ -17,7 +17,7 @@ _proxy_request* init_proxy_request(const char *dstip, const int dstport) {
     
     p_r->vn = 4;
     p_r->cn = 1;
-    p_r->dstport = htons((byte16) dstport);
+    p_r->dstport = htons(dstport);
     inet_pton(AF_INET, dstip, &p_r->dstip);
     strncpy_s((char *) p_r->userid, 8,  (const char *) PROXY_NAME, 8);
     return p_r;
@@ -68,18 +68,17 @@ int main(int argc, const char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    server_addr.sin_port = htons(port);
+    server_addr.sin_port = htons(PROXY_PORT);
     server_addr.sin_family = AF_INET;
 
-    result = inet_pton(AF_INET, (const char *) host, &server_addr.sin_addr);
+    result = inet_pton(AF_INET, (const char *) PROXY_HOST, &server_addr.sin_addr);
 
     if (result != 1) {
         fprintf(stderr, "Invalid address\n");
         closesocket(sock);
         WSACleanup();
         return EXIT_FAILURE;
-    }
-
+    }   
 
     QueryPerformanceCounter(&start);
     result = connect(sock, (const SOCKADDR *) &server_addr, sizeof(server_addr));
@@ -90,7 +89,6 @@ int main(int argc, const char *argv[]) {
         (double)frequency.QuadPart;
 
     printf("[Time eclapsed] connect took %.2f ms\n", elapsed_ms);
-
     if (result == SOCKET_ERROR) {
         fprintf(stderr, "connect function failed with error: %d\n", WSAGetLastError());
         result = closesocket(sock);
@@ -102,8 +100,8 @@ int main(int argc, const char *argv[]) {
 
     _proxy_request* req;
     /*Init request to proxy*/
-    req = init_proxy_request((const char *) host, (const int)  port);
-    result = send(sock, (const char *) req, (int) REQUEST_SIZE - 1, 0);
+    req = init_proxy_request((const char *) host ,(const int) port);
+    result = send(sock, (const char *) req, (int) REQUEST_SIZE, 0);
 
     if (result == SOCKET_ERROR) {
         fprintf(stderr,
@@ -120,6 +118,14 @@ int main(int argc, const char *argv[]) {
             
         if (result > 0) {
             total_received += result;
+
+            QueryPerformanceCounter(&end);
+
+            elapsed_ms =
+                (double)(end.QuadPart - start.QuadPart) * 1000.0 /
+                (double)frequency.QuadPart;
+
+            printf("[Time eclapsed] receive took %.2f ms\n", elapsed_ms);
         }
         else if (result == 0) {
             fprintf(
@@ -147,15 +153,8 @@ int main(int argc, const char *argv[]) {
         }
     }
 
-    QueryPerformanceCounter(&end);
-
-    elapsed_ms =
-        (double)(end.QuadPart - start.QuadPart) * 1000.0 /
-        (double)frequency.QuadPart;
-
-    printf("[Time eclapsed] receive took %.2f ms\n", elapsed_ms);
-
     _proxy_response* res = (_proxy_response*) buffer_response;
+
     if (res->cn != REQUEST_GRANTED) {
         fprintf(stderr, "Unable to tranverse the proxy, error code: %d\r\n", res->cn);
         closesocket(sock);
