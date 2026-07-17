@@ -119,6 +119,8 @@ void log_printf(FILE *stream, const char *format, ...)
             FOREGROUND_GREEN |
             FOREGROUND_INTENSITY;
     }
+#else
+    stream_name = (stream == stderr) ? "stderr" : "stdout";
 #endif
     GetLocalTime(&now);
 
@@ -184,7 +186,7 @@ void log_printf(FILE *stream, const char *format, ...)
      * Print colored output to stdout or stderr.
      */
 #ifdef DEBUG_FLAG
-    set_console_color(console_handle,output_color,&original_color);
+    set_console_color(console_handle, output_color, &original_color);
 
     fwrite(message, 1, (size_t)total_length, stream);
     fwrite("\n", 1, 1, stream);
@@ -226,8 +228,6 @@ void log_printf(FILE *stream, const char *format, ...)
         NULL
     );
 
-    
-
     CloseHandle(log_file);
 }
 
@@ -235,14 +235,14 @@ int receive_full(SOCKET s, char *buffer_response, const int response_size) {
     LOG_PRINTF(stdout, "[receive_full] receive init");
     int total_received = 0;
     while (total_received < response_size) {
-        int result = recv(s, buffer_response + total_received,        // ← append, not overwrite
+        int result = recv(s, buffer_response + total_received,        // append, not overwrite
                           response_size - total_received, 0);
         if (result > 0) {
             total_received += result;
         }
         else if (result == 0) {
             LOG_PRINTF(stderr, "[receive_full] peer closed early");
-            return -1;    // peer closed early — no WSACleanup here
+            return -1;    // peer closed early
         }
         else {
             LOG_PRINTF(stderr, "[receive_full] recv error");
