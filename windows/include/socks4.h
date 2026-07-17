@@ -1,6 +1,12 @@
 #pragma once
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
+#include "socks4.h"
+#include "utils.h"
+//Win Socket
+#include <winsock2.h>
+#include <ws2tcpip.h>
 
 #define PROXY_HOST "127.0.0.1"
 #define PROXY_PORT 9050
@@ -13,7 +19,7 @@
 */
 
 /*
-TCP proxy
+TCP proxy socks4
 https://www.openssh.org/txt/socks4.protocol
 */
 
@@ -166,6 +172,4 @@ code with one of the following values:
 	93: request rejected because the client program and identd
 	    report different user-ids.
 */
-
-_proxy_request* init_proxy_request(const char *dstip, const int dstport);
-_proxy_response* init_proxy_response();
+int socks4_handshake(SOCKET socket, const SOCKADDR_IN* dst);
