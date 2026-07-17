@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "toralize.h"
-
+#include "utils.h"
 //Win Socket
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -30,17 +30,45 @@ _proxy_response* init_proxy_response() {
     return p_r;
 }
 
+//result = recv(sock, buffer_response, (int) RESPONSE_SIZE - total_received, 0);
+int receive_full(SOCKET s, char *buffer_response, const int response_size) {
+    int total_received = 0;
+    int result;
+    while (
+        total_received < response_size 
+    )
+    {
+        result = recv(s, buffer_response, (int) response_size - total_received, 0);
+        if (result > 0) {
+            total_received += result;
+        }
+        else if (result == 0) {
+            fprintf(
+                stderr,
+                "Proxy closed the connection before sending a complete response.\n"
+            );
+            closesocket(s);
+            WSACleanup();
+            return EXIT_FAILURE;
+        }
+        else {
+            fprintf(
+                stderr,
+                "recv failed: %d\n",
+                WSAGetLastError()
+            );
+            return EXIT_FAILURE;
+        }
+    }
+    return total_received;
+}
+
 int main(int argc, const char *argv[]) {
     
     WSADATA wsa_data;
     SOCKET sock = INVALID_SOCKET;
     SOCKADDR_IN server_addr;
     
-    LARGE_INTEGER frequency;
-    LARGE_INTEGER start;
-    LARGE_INTEGER end;
-    QueryPerformanceFrequency(&frequency);
-    double elapsed_ms;
     /* Bounding insufficient input*/
     if (argc < 3) {
         fprintf(stderr, "Usage toralize: toralize <IP> <PORT>\r\n");
@@ -80,15 +108,10 @@ int main(int argc, const char *argv[]) {
         return EXIT_FAILURE;
     }   
 
-    QueryPerformanceCounter(&start);
-    result = connect(sock, (const SOCKADDR *) &server_addr, sizeof(server_addr));
-    QueryPerformanceCounter(&end);
+    TIME_ECLAPSE("connect",
+    result = connect(sock, (const SOCKADDR *) &server_addr, sizeof(server_addr))
+    );
 
-    elapsed_ms =
-        (double)(end.QuadPart - start.QuadPart) * 1000.0 /
-        (double)frequency.QuadPart;
-
-    printf("[Time eclapsed] connect took %.2f ms\n", elapsed_ms);
     if (result == SOCKET_ERROR) {
         fprintf(stderr, "connect function failed with error: %d\n", WSAGetLastError());
         result = closesocket(sock);
@@ -101,7 +124,10 @@ int main(int argc, const char *argv[]) {
     _proxy_request* req;
     /*Init request to proxy*/
     req = init_proxy_request((const char *) host ,(const int) port);
-    result = send(sock, (const char *) req, (int) REQUEST_SIZE, 0);
+
+    TIME_ECLAPSE("send",
+    result = send(sock, (const char *) req, (int) REQUEST_SIZE, 0)
+    );
 
     if (result == SOCKET_ERROR) {
         fprintf(stderr,
@@ -110,48 +136,9 @@ int main(int argc, const char *argv[]) {
     } 
 
     char buffer_response[RESPONSE_SIZE] = {0};
-    int total_received = 0;
-
-    QueryPerformanceCounter(&start);
-    while(total_received < RESPONSE_SIZE) {
-        result = recv(sock, buffer_response, (int) RESPONSE_SIZE - total_received, 0);
-            
-        if (result > 0) {
-            total_received += result;
-
-            QueryPerformanceCounter(&end);
-
-            elapsed_ms =
-                (double)(end.QuadPart - start.QuadPart) * 1000.0 /
-                (double)frequency.QuadPart;
-
-            printf("[Time eclapsed] receive took %.2f ms\n", elapsed_ms);
-        }
-        else if (result == 0) {
-            fprintf(
-                stderr,
-                "Proxy closed the connection before sending a complete response.\n"
-            );
-            QueryPerformanceCounter(&end);
-
-            elapsed_ms =
-                (double)(end.QuadPart - start.QuadPart) * 1000.0 /
-                (double)frequency.QuadPart;
-
-            printf("[Time eclapsed] receive took %.2f ms\n", elapsed_ms);
-            closesocket(sock);
-            WSACleanup();
-            return EXIT_FAILURE;
-        }
-        else {
-            fprintf(
-                stderr,
-                "recv failed: %d\n",
-                WSAGetLastError()
-            );
-            return EXIT_FAILURE;
-        }
-    }
+    TIME_ECLAPSE("receive",
+    result = receive_full(sock, buffer_response, RESPONSE_SIZE)
+    );
 
     _proxy_response* res = (_proxy_response*) buffer_response;
 
@@ -165,8 +152,38 @@ int main(int argc, const char *argv[]) {
         fprintf(stdout, "Successfully tranverse the proxy via host: %s, port %d\r\n", host, port);
     }
 
+
+    char buff_temp[512];
+    memset(buff_temp, 0, sizeof(buff_temp));
+
+    snprintf(buff_temp, 511,
+        "HEAD / HTTP/1.0\r\n"
+        "HOST: 46.227.66.141:80\r\n"
+        "\r\n"
+    );
+
+    TIME_ECLAPSE("send",
+    result = send(sock, (const char *) buff_temp, (int) 512, 0)
+    );
+
+    if (result == SOCKET_ERROR) {
+        fprintf(stderr,
+                "send failed: %d\n",
+                WSAGetLastError());
+    }
+
+    memset(buff_temp, 0, sizeof(buff_temp));
+    TIME_ECLAPSE("receive",
+    result = receive_full(sock, buff_temp, 512)
+    );
+
+    fprintf(stdout, "Receive:\r\n %s\r\n", buff_temp);
+
+
     closesocket(sock);
     WSACleanup();
 
     return EXIT_SUCCESS;
 }
+
+
